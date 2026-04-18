@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Spendly{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="auth-container">
+
+        <div class="auth-header">
+            <h1 class="auth-title">Your Profile</h1>
+            <p class="auth-subtitle">Account details and activity</p>
+        </div>
+
+        <div class="auth-card">
+            <div class="profile-avatar">{{ user.name[0].upper() }}</div>
+            <div class="profile-field">
+                <span class="form-label">Name</span>
+                <span class="profile-value">{{ user.name }}</span>
+            </div>
+            <div class="profile-field">
+                <span class="form-label">Email</span>
+                <span class="profile-value">{{ user.email }}</span>
+            </div>
+            <div class="profile-field">
+                <span class="form-label">Member since</span>
+                <span class="profile-value">{{ member_since }}</span>
+            </div>
+        </div>
+
+        <div class="auth-card profile-stat-card">
+            <span class="profile-stat-number">{{ expense_count }}</span>
+            <span class="profile-stat-label">Total expenses recorded</span>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

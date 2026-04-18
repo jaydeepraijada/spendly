@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import init_db, seed_db, get_db
@@ -47,7 +48,7 @@ def register():
     finally:
         conn.close()
 
-    return redirect(url_for("login"))
+    return redirect(url_for("profile"))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -75,7 +76,7 @@ def login():
 
     session["user_id"] = row["id"]
     session["user_name"] = row["name"]
-    return redirect(url_for("landing"))
+    return redirect(url_for("profile"))
 
 
 # ------------------------------------------------------------------ #
@@ -100,7 +101,36 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    try:
+        user = conn.execute(
+            "SELECT id, name, email, created_at FROM users WHERE id = ?",
+            (session["user_id"],),
+        ).fetchone()
+        if user is None:
+            session.clear()
+            return redirect(url_for("login"))
+        expense_count = conn.execute(
+            "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
+            (session["user_id"],),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+    try:
+        member_since = datetime.strptime(user["created_at"], "%Y-%m-%d %H:%M:%S").strftime("%B %Y")
+    except (ValueError, TypeError):
+        member_since = "—"
+
+    return render_template(
+        "profile.html",
+        user=user,
+        expense_count=expense_count,
+        member_since=member_since,
+    )
 
 
 @app.route("/expenses/add")
