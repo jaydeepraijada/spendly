@@ -2,10 +2,18 @@ import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import init_db, seed_db, get_db
+from database.db import init_db, seed_db, get_db, get_expenses_for_user
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-change-in-prod"
+
+
+def _parse_date(raw):
+    try:
+        datetime.strptime(raw, "%Y-%m-%d")
+        return raw
+    except ValueError:
+        return ""
 
 
 # ------------------------------------------------------------------ #
@@ -117,6 +125,12 @@ def profile():
             "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
             (session["user_id"],),
         ).fetchone()[0]
+
+        date_from = _parse_date(request.args.get("date_from", "").strip())
+        date_to = _parse_date(request.args.get("date_to", "").strip())
+
+        expenses = get_expenses_for_user(conn, session["user_id"], date_from, date_to)
+        filtered_count = len(expenses)
     finally:
         conn.close()
 
@@ -130,6 +144,10 @@ def profile():
         user=user,
         expense_count=expense_count,
         member_since=member_since,
+        expenses=expenses,
+        filtered_count=filtered_count,
+        date_from=date_from,
+        date_to=date_to,
     )
 
 

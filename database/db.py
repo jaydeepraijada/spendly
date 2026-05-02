@@ -34,6 +34,19 @@ def init_db():
     conn.close()
 
 
+def get_expenses_for_user(conn, user_id, date_from="", date_to=""):
+    query = "SELECT id, date, category, description, amount FROM expenses WHERE user_id = ?"
+    params = [user_id]
+    if date_from:
+        query += " AND date >= ?"
+        params.append(date_from)
+    if date_to:
+        query += " AND date <= ?"
+        params.append(date_to)
+    query += " ORDER BY date DESC, id DESC"
+    return conn.execute(query, params).fetchall()
+
+
 def seed_db():
     conn = get_db()
     cursor = conn.cursor()
