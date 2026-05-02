@@ -133,6 +133,87 @@ def profile():
     )
 
 
+@app.route("/profile/edit", methods=["GET"])
+def edit_profile_get():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    try:
+        user = conn.execute(
+            "SELECT id, name, email FROM users WHERE id = ?",
+            (session["user_id"],),
+        ).fetchone()
+        if user is None:
+            session.clear()
+            return redirect(url_for("login"))
+    finally:
+        conn.close()
+
+    return render_template("profile_edit.html", user=user)
+
+
+@app.route("/profile/edit", methods=["POST"])
+def edit_profile_post():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+
+    db = get_db()
+    try:
+        user = db.execute(
+            "SELECT id, name, email, password_hash FROM users WHERE id = ?",
+            (session["user_id"],)
+        ).fetchone()
+
+        if not check_password_hash(user["password_hash"], current_password):
+            return render_template(
+                "profile_edit.html",
+                error="Current password is incorrect.",
+                name=name,
+                email=email,
+            )
+
+        if new_password and len(new_password) < 8:
+            return render_template(
+                "profile_edit.html",
+                error="New password must be at least 8 characters.",
+                name=name,
+                email=email,
+            )
+
+        try:
+            if new_password:
+                db.execute(
+                    "UPDATE users SET name = ?, email = ?, password_hash = ? WHERE id = ?",
+                    (name, email, generate_password_hash(new_password), session["user_id"])
+                )
+            else:
+                db.execute(
+                    "UPDATE users SET name = ?, email = ? WHERE id = ?",
+                    (name, email, session["user_id"])
+                )
+            db.commit()
+        except sqlite3.IntegrityError:
+            return render_template(
+                "profile_edit.html",
+                error="Email already in use.",
+                name=name,
+                email=email,
+            )
+
+        if name != user["name"]:
+            session["user_name"] = name
+
+        return redirect(url_for("profile"))
+    finally:
+        db.close()
+
+
 @app.route("/expenses/add")
 def add_expense():
     return "Add expense — coming in Step 7"
